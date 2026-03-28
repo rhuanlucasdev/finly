@@ -329,7 +329,7 @@ export default function DashboardPage() {
                 />
                 <Tooltip
                   cursor={false}
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value) => formatCurrency(Number(value))}
                   contentStyle={{
                     background: "var(--surface-container-highest)",
                     border: "none",
