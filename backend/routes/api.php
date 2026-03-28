@@ -2,6 +2,7 @@
 
 use App\Presentation\Http\Controllers\AuthController;
 use App\Presentation\Http\Controllers\TransactionController;
+use App\Presentation\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -21,4 +22,5 @@ Route::middleware('auth:sanctum')->group(function () {
         'update',
         'destroy'
     ]);
+    Route::get('dashboard', [DashboardController::class, 'index']);
 });
