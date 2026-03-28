@@ -1,6 +1,8 @@
 "use client";
 
+import { useDashboard } from "@/presentation/hooks/useDashboard";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { formatCurrency } from "@/lib/format";
 import {
   BarChart,
   Bar,
@@ -19,88 +21,56 @@ import {
   ShoppingCart,
   Home,
   Tv,
+  Wallet,
   Plus,
 } from "lucide-react";
 
-const cashFlowData = [
-  { month: "MAY", income: 9000, expense: 4000 },
-  { month: "JUN", income: 10500, expense: 5200 },
-  { month: "JUL", income: 9800, expense: 4100 },
-  { month: "AUG", income: 11000, expense: 3800 },
-  { month: "SEP", income: 10200, expense: 4500 },
-  { month: "OCT", income: 12500, expense: 8120 },
-];
+const categoryIcons: Record<string, React.ElementType> = {
+  Trabalho: TrendingUp,
+  Freelance: TrendingUp,
+  Moradia: Home,
+  Alimentação: ShoppingCart,
+  Entretenimento: Tv,
+  Saúde: Wallet,
+};
 
-const recentTransactions = [
-  {
-    icon: Tv,
-    label: "Netflix Subscription",
-    sub: "Entertainment • Oct 22",
-    amount: "-R$ 55,90",
-    positive: false,
-  },
-  {
-    icon: ShoppingCart,
-    label: "Pão de Açúcar",
-    sub: "Food & Grocery • Oct 21",
-    amount: "-R$ 412,30",
-    positive: false,
-  },
-  {
-    icon: Home,
-    label: "Monthly Rent",
-    sub: "Housing • Oct 20",
-    amount: "-R$ 3.200,00",
-    positive: false,
-  },
-  {
-    icon: TrendingUp,
-    label: "Freelance Design",
-    sub: "Income • Oct 18",
-    amount: "+R$ 2.400,00",
-    positive: true,
-  },
-];
+function SkeletonCard() {
+  return (
+    <div
+      className="rounded-card p-5 animate-pulse"
+      style={{ background: "var(--surface-container-high)" }}
+    >
+      <div
+        className="h-3 w-24 rounded-full mb-4"
+        style={{ background: "var(--surface-container-highest)" }}
+      />
+      <div
+        className="h-8 w-32 rounded-full mb-3"
+        style={{ background: "var(--surface-container-highest)" }}
+      />
+      <div
+        className="h-3 w-20 rounded-full"
+        style={{ background: "var(--surface-container-highest)" }}
+      />
+    </div>
+  );
+}
 
-const expenseBreakdown = [
-  { label: "Housing", pct: 45, color: "#C0C1FF" },
-  { label: "Food", pct: 25, color: "#FFB94A" },
-  { label: "Entertainment", pct: 20, color: "#8083FF" },
-  { label: "Transport", pct: 10, color: "#464554" },
-];
+function DonutChart({
+  data,
+  total,
+}: {
+  data: { category: string; percentage: number }[];
+  total: number;
+}) {
+  const colors = [
+    "var(--primary)",
+    "var(--tertiary)",
+    "var(--primary-container)",
+    "var(--surface-bright)",
+    "var(--outline)",
+  ];
 
-const kpiCards = [
-  {
-    label: "Total Balance",
-    value: "R$ 45.230,00",
-    sub: "+2.4% this month",
-    subPositive: true,
-    icon: Building2,
-  },
-  {
-    label: "Monthly Income",
-    value: "R$ 12.500,00",
-    sub: "Expected: R$ 12.000",
-    subPositive: true,
-    icon: ArrowDownLeft,
-  },
-  {
-    label: "Monthly Expenses",
-    value: "R$ 8.120,00",
-    sub: "12% lower than last month",
-    subPositive: false,
-    icon: ArrowUpRight,
-  },
-  {
-    label: "Savings Rate",
-    value: "35%",
-    sub: null,
-    progress: 35,
-    icon: PiggyBank,
-  },
-];
-
-function DonutChart() {
   const size = 180;
   const stroke = 28;
   const r = (size - stroke) / 2;
@@ -118,21 +88,19 @@ function DonutChart() {
         viewBox={`0 0 ${size} ${size}`}
         className="-rotate-90"
       >
-        {expenseBreakdown.map((seg) => {
-          const dash = (seg.pct / 100) * circ;
-          const gap = circ - dash;
+        {data.map((seg, i) => {
+          const dash = (seg.percentage / 100) * circ;
           const el = (
             <circle
-              key={seg.label}
+              key={i}
               cx={size / 2}
               cy={size / 2}
               r={r}
               fill="none"
-              stroke={seg.color}
+              stroke={colors[i % colors.length]}
               strokeWidth={stroke}
-              strokeDasharray={`${dash} ${gap}`}
+              strokeDasharray={`${dash} ${circ - dash}`}
               strokeDashoffset={-offset}
-              strokeLinecap="butt"
             />
           );
           offset += dash;
@@ -140,9 +108,17 @@ function DonutChart() {
         })}
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-[11px] text-on-surface-variant">Total Spent</span>
-        <span className="text-lg font-bold tabular-nums text-on-surface leading-tight">
-          R$ 8.120
+        <span
+          className="text-[11px]"
+          style={{ color: "var(--on-surface-variant)" }}
+        >
+          Total Gasto
+        </span>
+        <span
+          className="text-base font-bold tabular-nums"
+          style={{ color: "var(--on-surface)", letterSpacing: "-0.02em" }}
+        >
+          {formatCurrency(total)}
         </span>
       </div>
     </div>
@@ -151,211 +127,354 @@ function DonutChart() {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { data, isLoading, isError } = useDashboard();
 
   const hour = new Date().getHours();
   const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const firstName = user?.name?.split(" ")[0] ?? "";
 
-  const today = new Date().toLocaleDateString("en-US", {
+  const today = new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
 
+  const colors = [
+    "var(--primary)",
+    "var(--tertiary)",
+    "var(--primary-container)",
+    "var(--surface-bright)",
+    "var(--outline)",
+  ];
+
+  const kpiCards = [
+    {
+      label: "Saldo Total",
+      value: data ? formatCurrency(data.kpis.total_balance) : "—",
+      sub: "saldo acumulado",
+      subPositive: true,
+      icon: Building2,
+    },
+    {
+      label: "Receitas do Mês",
+      value: data ? formatCurrency(data.kpis.monthly_income) : "—",
+      sub: "mês atual",
+      subPositive: true,
+      icon: ArrowDownLeft,
+    },
+    {
+      label: "Despesas do Mês",
+      value: data ? formatCurrency(data.kpis.monthly_expenses) : "—",
+      sub: "mês atual",
+      subPositive: false,
+      icon: ArrowUpRight,
+    },
+    {
+      label: "Taxa de Economia",
+      value: data ? `${data.kpis.savings_rate}%` : "—",
+      progress: data?.kpis.savings_rate,
+      icon: PiggyBank,
+    },
+  ];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Greeting */}
       <div>
-        <h1 className="text-[2.5rem] font-bold tracking-tight text-on-surface leading-tight">
+        <h1
+          className="font-bold tracking-tight"
+          style={{
+            fontSize: "2.25rem",
+            letterSpacing: "-0.02em",
+            color: "var(--on-surface)",
+          }}
+        >
           {greeting}, {firstName} 👋
         </h1>
-        <p className="text-on-surface-variant text-label-md mt-1">{today}</p>
+        <p
+          className="mt-1 text-sm capitalize"
+          style={{ color: "var(--on-surface-variant)" }}
+        >
+          {today}
+        </p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        {kpiCards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-card p-5"
-            style={{ background: "var(--surface-container-high)" }}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">
-                {card.label}
-              </span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          : kpiCards.map((card) => (
               <div
-                className="rounded-full p-2"
-                style={{ background: "var(--surface-container-highest)" }}
+                key={card.label}
+                className="rounded-card p-5"
+                style={{ background: "var(--surface-container-high)" }}
               >
-                <card.icon className="h-4 w-4 text-on-surface-variant" />
-              </div>
-            </div>
-
-            <p className="text-[1.6rem] font-bold tabular-nums text-on-surface leading-none mb-3">
-              {card.value}
-            </p>
-
-            {card.progress !== undefined ? (
-              <div
-                className="h-1 rounded-full"
-                style={{ background: "var(--surface-container-highest)" }}
-              >
-                <div
-                  className="h-1 rounded-full"
+                <div className="flex items-start justify-between mb-4">
+                  <span
+                    className="text-xs font-medium uppercase tracking-wider"
+                    style={{ color: "var(--on-surface-variant)" }}
+                  >
+                    {card.label}
+                  </span>
+                  <div
+                    className="rounded-full p-2"
+                    style={{ background: "var(--surface-container-highest)" }}
+                  >
+                    <card.icon
+                      className="h-3.5 w-3.5"
+                      style={{ color: "var(--on-surface-variant)" }}
+                    />
+                  </div>
+                </div>
+                <p
+                  className="font-bold tabular-nums mb-3"
                   style={{
-                    width: `${card.progress}%`,
-                    background: "var(--primary)",
+                    fontSize: "1.5rem",
+                    letterSpacing: "-0.02em",
+                    color: "var(--on-surface)",
                   }}
-                />
+                >
+                  {card.value}
+                </p>
+                {card.progress !== undefined ? (
+                  <div
+                    className="h-1 rounded-full"
+                    style={{ background: "var(--surface-container-highest)" }}
+                  >
+                    <div
+                      className="h-1 rounded-full transition-all"
+                      style={{
+                        width: `${card.progress}%`,
+                        background: "var(--primary)",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p
+                    className="text-xs font-medium"
+                    style={{
+                      color: card.subPositive
+                        ? "var(--success)"
+                        : "var(--tertiary)",
+                    }}
+                  >
+                    {card.sub}
+                  </p>
+                )}
               </div>
-            ) : (
-              <p
-                className={`text-label-sm font-medium ${card.subPositive ? "text-success" : "text-tertiary"}`}
-              >
-                {card.subPositive ? "↗ " : "↘ "}
-                {card.sub}
-              </p>
-            )}
-          </div>
-        ))}
+            ))}
       </div>
 
-      {/* Cash Flow Chart */}
+      {/* Cash Flow */}
       <div
         className="rounded-card p-6"
         style={{ background: "var(--surface-container)" }}
       >
-        <div className="flex items-start justify-between mb-1">
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <h2 className="text-title-lg font-semibold text-on-surface">
-              Cash Flow Analytics
+            <h2
+              className="font-semibold"
+              style={{ fontSize: "1.1rem", color: "var(--on-surface)" }}
+            >
+              Fluxo de Caixa
             </h2>
-            <p className="text-label-sm text-on-surface-variant mt-0.5">
-              Comparative analysis of earnings vs spending (last 6 months)
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--on-surface-variant)" }}
+            >
+              Receitas vs despesas nos últimos 6 meses
             </p>
           </div>
-          <div className="flex items-center gap-4 text-label-sm text-on-surface-variant">
+          <div
+            className="flex items-center gap-4 text-xs"
+            style={{ color: "var(--on-surface-variant)" }}
+          >
             <span className="flex items-center gap-1.5">
               <span
                 className="h-2 w-2 rounded-full inline-block"
                 style={{ background: "var(--primary)" }}
               />
-              Income
+              Receitas
             </span>
             <span className="flex items-center gap-1.5">
               <span
                 className="h-2 w-2 rounded-full inline-block"
                 style={{ background: "var(--tertiary)" }}
               />
-              Expenses
+              Despesas
             </span>
           </div>
         </div>
 
-        <div className="mt-6 h-52">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={cashFlowData} barGap={4} barCategoryGap="30%">
-              <XAxis
-                dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--on-surface-variant)", fontSize: 11 }}
-              />
-              <Tooltip
-                cursor={false}
-                contentStyle={{
-                  background: "var(--surface-container-highest)",
-                  border: "none",
-                  borderRadius: "0.75rem",
-                  color: "var(--on-surface)",
-                  fontSize: 12,
-                }}
-              />
-              <Bar dataKey="income" radius={[6, 6, 0, 0]}>
-                {cashFlowData.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={
-                      i === cashFlowData.length - 1
-                        ? "var(--primary)"
-                        : "var(--surface-container-highest)"
-                    }
-                    fillOpacity={i === cashFlowData.length - 1 ? 1 : 0.8}
-                  />
-                ))}
-              </Bar>
-              <Bar dataKey="expense" radius={[6, 6, 0, 0]}>
-                {cashFlowData.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={
-                      i === cashFlowData.length - 1
-                        ? "var(--tertiary)"
-                        : "var(--tertiary-container)"
-                    }
-                    fillOpacity={i === cashFlowData.length - 1 ? 1 : 0.7}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="h-52">
+          {isLoading ? (
+            <div
+              className="h-full rounded-xl animate-pulse"
+              style={{ background: "var(--surface-container-high)" }}
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data?.cash_flow ?? []}
+                barGap={4}
+                barCategoryGap="30%"
+              >
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--on-surface-variant)", fontSize: 11 }}
+                />
+                <Tooltip
+                  cursor={false}
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{
+                    background: "var(--surface-container-highest)",
+                    border: "none",
+                    borderRadius: "0.75rem",
+                    color: "var(--on-surface)",
+                    fontSize: 12,
+                  }}
+                />
+                <Bar dataKey="income" radius={[6, 6, 0, 0]}>
+                  {(data?.cash_flow ?? []).map((_, i, arr) => (
+                    <Cell
+                      key={i}
+                      fill={
+                        i === arr.length - 1
+                          ? "var(--primary)"
+                          : "var(--surface-container-highest)"
+                      }
+                    />
+                  ))}
+                </Bar>
+                <Bar dataKey="expense" radius={[6, 6, 0, 0]}>
+                  {(data?.cash_flow ?? []).map((_, i, arr) => (
+                    <Cell
+                      key={i}
+                      fill={
+                        i === arr.length - 1
+                          ? "var(--tertiary)"
+                          : "var(--tertiary-container)"
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-[1fr_380px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
         {/* Recent Transactions */}
         <div
           className="rounded-card p-6"
           style={{ background: "var(--surface-container)" }}
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-title-lg font-semibold text-on-surface">
-              Recent Transactions
+            <h2
+              className="font-semibold"
+              style={{ fontSize: "1.1rem", color: "var(--on-surface)" }}
+            >
+              Transações Recentes
             </h2>
-            <button className="text-label-sm text-primary hover:opacity-70 transition-opacity">
-              View All
+            <button
+              className="text-xs font-medium transition-opacity hover:opacity-70"
+              style={{ color: "var(--primary)" }}
+            >
+              Ver todas
             </button>
           </div>
 
-          <div className="space-y-2">
-            {recentTransactions.map((tx) => (
-              <div
-                key={tx.label}
-                className="flex items-center gap-4 rounded-[1rem] px-4 py-3 hover:bg-surface-highest transition-colors cursor-pointer"
-                style={{ "--tw-bg-opacity": 1 } as React.CSSProperties}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "var(--surface-container-highest)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <div
-                  className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "var(--surface-container-highest)" }}
-                >
-                  <tx.icon className="h-4 w-4 text-on-surface-variant" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-label-md font-medium text-on-surface truncate">
-                    {tx.label}
-                  </p>
-                  <p className="text-label-sm text-on-surface-variant">
-                    {tx.sub}
-                  </p>
-                </div>
-                <p
-                  className={`text-label-md font-semibold tabular-nums shrink-0 ${tx.positive ? "text-success" : "text-on-surface"}`}
-                >
-                  {tx.amount}
-                </p>
-              </div>
-            ))}
+          <div className="space-y-1">
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 px-4 py-3 animate-pulse"
+                  >
+                    <div
+                      className="h-10 w-10 rounded-full shrink-0"
+                      style={{ background: "var(--surface-container-highest)" }}
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div
+                        className="h-3 w-32 rounded-full"
+                        style={{
+                          background: "var(--surface-container-highest)",
+                        }}
+                      />
+                      <div
+                        className="h-2 w-20 rounded-full"
+                        style={{
+                          background: "var(--surface-container-highest)",
+                        }}
+                      />
+                    </div>
+                    <div
+                      className="h-3 w-16 rounded-full"
+                      style={{ background: "var(--surface-container-highest)" }}
+                    />
+                  </div>
+                ))
+              : (data?.recent_transactions ?? []).map((tx) => {
+                  const Icon = categoryIcons[tx.category] ?? Wallet;
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center gap-4 rounded-xl px-4 py-3 cursor-pointer transition-colors"
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "var(--surface-container-highest)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      <div
+                        className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
+                        style={{
+                          background: "var(--surface-container-highest)",
+                        }}
+                      >
+                        <Icon
+                          className="h-4 w-4"
+                          style={{ color: "var(--on-surface-variant)" }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-medium truncate"
+                          style={{ color: "var(--on-surface)" }}
+                        >
+                          {tx.description}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--on-surface-variant)" }}
+                        >
+                          {tx.category} • {tx.date}
+                        </p>
+                      </div>
+                      <p
+                        className="text-sm font-semibold tabular-nums shrink-0"
+                        style={{
+                          color:
+                            tx.type === "income"
+                              ? "var(--success)"
+                              : "var(--on-surface)",
+                        }}
+                      >
+                        {tx.type === "income" ? "+" : "-"}
+                        {formatCurrency(tx.amount)}
+                      </p>
+                    </div>
+                  );
+                })}
           </div>
         </div>
 
@@ -365,50 +484,74 @@ export default function DashboardPage() {
           style={{ background: "var(--surface-container)" }}
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-title-lg font-semibold text-on-surface">
-              Expense Breakdown
+            <h2
+              className="font-semibold"
+              style={{ fontSize: "1.1rem", color: "var(--on-surface)" }}
+            >
+              Gastos por Categoria
             </h2>
-            <button className="text-on-surface-variant hover:text-on-surface transition-colors">
+            <button
+              className="transition-colors hover:opacity-70"
+              style={{ color: "var(--on-surface-variant)" }}
+            >
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </div>
 
-          {/* FAB */}
           <button
-            className="absolute top-14 right-6 h-10 w-10 rounded-full flex items-center justify-center shadow-float z-10"
+            className="absolute top-14 right-6 h-10 w-10 rounded-full flex items-center justify-center z-10"
             style={{
               background:
                 "linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%)",
             }}
           >
-            <Plus className="h-4 w-4 text-on-primary" />
+            <Plus className="h-4 w-4" style={{ color: "var(--on-primary)" }} />
           </button>
 
-          <div className="flex justify-center mb-6">
-            <DonutChart />
-          </div>
-
-          <div className="space-y-3">
-            {expenseBreakdown.map((seg) => (
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-4">
               <div
-                key={seg.label}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ background: seg.color }}
-                  />
-                  <span className="text-label-md text-on-surface-variant">
-                    {seg.label}
-                  </span>
-                </div>
-                <span className="text-label-md font-semibold tabular-nums text-on-surface">
-                  {seg.pct}%
-                </span>
+                className="h-44 w-44 rounded-full animate-pulse"
+                style={{ background: "var(--surface-container-highest)" }}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-center mb-6">
+                <DonutChart
+                  data={data?.expense_breakdown ?? []}
+                  total={data?.kpis.monthly_expenses ?? 0}
+                />
               </div>
-            ))}
-          </div>
+              <div className="space-y-3">
+                {(data?.expense_breakdown ?? []).map((seg, i) => (
+                  <div
+                    key={seg.category}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ background: colors[i % colors.length] }}
+                      />
+                      <span
+                        className="text-sm"
+                        style={{ color: "var(--on-surface-variant)" }}
+                      >
+                        {seg.category}
+                      </span>
+                    </div>
+                    <span
+                      className="text-sm font-semibold tabular-nums"
+                      style={{ color: "var(--on-surface)" }}
+                    >
+                      {seg.percentage}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
