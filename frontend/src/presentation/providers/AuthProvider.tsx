@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -16,14 +17,19 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // ← começa como true!
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("finly_token");
-    const storedUser = localStorage.getItem("finly_user");
+    try {
+      const storedToken = localStorage.getItem("finly_token");
+      const storedUser = localStorage.getItem("finly_user");
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      }
+    } finally {
+      setIsLoading(false); // ← só redireciona depois de checar
     }
   }, []);
 
@@ -49,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isAuthenticated: !!token,
+        isLoading,
       }}
     >
       {children}
