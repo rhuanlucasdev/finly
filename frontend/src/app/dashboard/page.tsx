@@ -165,7 +165,7 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="space-y-8 max-w-[1100px]">
+    <div className="space-y-8">
       {/* Greeting */}
       <div>
         <h1 className="text-[2.5rem] font-bold tracking-tight text-on-surface leading-tight">
