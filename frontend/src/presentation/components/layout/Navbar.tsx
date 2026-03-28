@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { ThemeToggle } from "./ThemeToggle";
 
 export function Navbar() {
   const { user } = useAuth();
@@ -13,8 +12,6 @@ export function Navbar() {
       </p>
 
       <div className="flex items-center gap-3">
-        <ThemeToggle />
-
         <div className="flex items-center gap-2.5 rounded-chip bg-surface-container px-4 py-2">
           <div className="h-7 w-7 rounded-full bg-primary-container flex items-center justify-center">
             <span className="text-xs font-bold text-on-primary">
